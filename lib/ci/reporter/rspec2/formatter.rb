@@ -11,7 +11,13 @@ module CI::Reporter
       end
 
       def example_group_started(example_group)
-        new_suite(description_for(example_group))
+        @group_level ||= 0
+        new_suite(description_for(example_group)) if @group_level == 0
+        @group_level += 1
+      end
+
+      def example_group_finished(example_group)
+        @group_level -= 1
       end
 
       def example_started(name_or_example)
@@ -28,18 +34,18 @@ module CI::Reporter
 
         spec = @suite.testcases.last
         spec.finish
-        spec.name = description_for(name_or_example)
+        spec.name = testcase_name_by(@suite, name_or_example)
         spec.failures << failure
       end
 
       def example_passed(name_or_example)
         spec = @suite.testcases.last
         spec.finish
-        spec.name = description_for(name_or_example)
+        spec.name = testcase_name_by(@suite, name_or_example)
       end
 
       def example_pending(*args)
-        name = description_for(args[0])
+        name = testcase_name_by(@suite, args[0])
         spec = @suite.testcases.last
         spec.finish
         spec.name = "#{name} (PENDING)"
@@ -51,6 +57,16 @@ module CI::Reporter
       end
 
       private
+      def testcase_name_by(suite, name_or_example)
+        description = description_for(name_or_example)
+
+        if description.start_with?(suite.name)
+          description.sub(suite.name, "").lstrip
+        else
+          description
+        end
+      end
+
       def description_for(name_or_example)
         if name_or_example.respond_to?(:full_description)
           name_or_example.full_description
