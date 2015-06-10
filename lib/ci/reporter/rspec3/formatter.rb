@@ -11,7 +11,13 @@ module CI::Reporter
       end
 
       def example_group_started(notification)
-        new_suite(notification.group.metadata[:full_description])
+        @group_level ||= 0
+        new_suite(notification.group.metadata[:full_description]) if @group_level == 0
+        @group_level += 1
+      end
+
+      def example_group_finished(notification)
+        @group_level -= 1
       end
 
       def example_started(notification)
@@ -27,18 +33,18 @@ module CI::Reporter
         failure = Failure.new(notification)
 
         current_spec.finish
-        current_spec.name = notification.example.full_description
+        current_spec.name = testcase_name_by(@suite, notification)
         current_spec.failures << failure
       end
 
       def example_passed(notification)
         current_spec.finish
-        current_spec.name = notification.example.full_description
+        current_spec.name = testcase_name_by(@suite, notification)
       end
 
       def example_pending(notification)
         current_spec.finish
-        current_spec.name = "#{notification.example.full_description} (PENDING)"
+        current_spec.name = "#{testcase_name_by(@suite, notification)} (PENDING)"
         current_spec.skipped = true
       end
 
@@ -47,6 +53,15 @@ module CI::Reporter
       end
 
       private
+      def testcase_name_by(suite, notification)
+        description = notification.example.full_description
+
+        if description.start_with?(suite.name)
+          description.sub(suite.name, "").lstrip
+        else
+          description
+        end
+      end
 
       def current_spec
         @suite.testcases.last
