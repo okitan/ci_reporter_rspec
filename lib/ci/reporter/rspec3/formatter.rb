@@ -82,6 +82,7 @@ module CI::Reporter
 
     ::RSpec::Core::Formatters.register Formatter,
                                        :example_group_started,
+                                       :example_group_finished,
                                        :example_started,
                                        :example_passed,
                                        :example_failed,
